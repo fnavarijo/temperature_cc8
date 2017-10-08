@@ -10,6 +10,28 @@ Para poder levantar el proyecto, se debe correr el siguiente comando dentro de l
 yarn temp:start
 ```
 
+## Documentacion
+---
+La aplicación cuenta con tres rutas.
+
+#### GET /temp/
+Para obtener todos los estados de la temperatura almacenada.
+
+#### POST /temp/
+Para insertar un nuevo registro de temperatura. Los parametros serian los siguientes:
+```
+{
+    fecha: 'fecha',
+    temperature: 25
+}
+```
+#### GET /temp/shouldTurnOn
+Retorna la ultima temperature registrada.
+
+### Pruebas
+Para hacer las pruebas, se recomienda instalar [postman](https://www.getpostman.com/)
+
+
 ### Dudas
 ---
-Puede ser necesaria la instalacion de [yarn](https://yarnpkg.com/lang/en/docs/install/)
+* Puede ser necesaria la instalacion de [yarn](https://yarnpkg.com/lang/en/docs/install/)

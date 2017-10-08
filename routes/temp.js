@@ -18,7 +18,7 @@ router.get('/', (req, res, next) => {
         if (err) res.send('err');
         else{
             const result = _.map(body.rows, 'doc');
-            res.send(result);
+            res.status(200).send({ result });
         } 
     });
 });
@@ -28,7 +28,7 @@ router.get('/shouldTurnOn', (req, res, next) => {
         const lastId = body.results.length > 0 ? body.results[0].id : null;
         if (!err) {
             tempTable.get(lastId, (errId, bodyDoc) => {
-                if (!errId) res.send(bodyDoc);
+                if (!errId) res.status(200).send({ result: bodyDoc });
             });
         }
     })
@@ -41,7 +41,7 @@ router.post('/', multer.array(), (req, res, next) => {
             console.log(err);
             res.status(500).send(err);
         } else {
-            res.send('Stored temperature');
+            res.status(200).send({ msg: 'Stored temperature' });
         } 
     });
 });
