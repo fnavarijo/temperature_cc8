@@ -1,0 +1,13 @@
+version: '2'
+services:
+  web:
+    build: .
+    ports: 
+      - "3000:3000"
+    volumes:
+      - ../:/code
+    entrypoint: yarn docker:run
+  couch:
+    image: "couchdb"
+    ports:
+      - "5984:5984"
