@@ -26,6 +26,10 @@ router.get('/', function(req, res, next) {
   });
 
 
+// -----------------------------------------------------------------
+// Their Methods (Part2)
+// -----------------------------------------------------------------
+
 // POST - info
 router.post('/info', (req, res, next) => {
     hardwareTable.view('info', 'info', (err, body) => {
@@ -36,7 +40,7 @@ router.post('/info', (req, res, next) => {
                 respValue[doc.key] = doc.value;
                 return respValue;
             });
-            res.status(200).send(Object.assign(responseBase, { hardware: result }));
+            res.status(200).send(Object.assign({}, responseBase, { hardware: result }));
         }
     });
 });
@@ -58,11 +62,11 @@ router.post('/search', (req, res, next) => {
                             const registeredTime = moment(_.keys(data)[0]);
                             return registeredTime.isBetween(start_date, finish_date)
                         });
-                        res.send(Object.assign(responseBase, { search }, { data: timeFilter }));
+                        res.send(Object.assign({}, responseBase, { search }, { data: timeFilter }));
                     }
                 });
             } else {
-                res.send(Object.assign(responseBase));
+                res.send(Object.assign({}, responseBase));
             }
         }
     });
@@ -75,20 +79,26 @@ router.post('/change', (req, res, next) => {
     dataTable.insert({ date, rotation, id_hardware: _.keys(changeInfo)[0] }, null, (err, body) => {
         if (err) res.status(500).send({ err: 1, msg: err });
         else {
-            res.status(200).send(Object.assign(responseBase, { status: 'OK' }));
+            res.status(200).send(Object.assign({}, responseBase, { status: 'OK' }));
         }
     });
 });
 
-// router.get('/', (req, res, next) => {
-//     tempTable.list({include_docs: true}, (err, body) => {
-//         if (err) res.send('err');
-//         else{
-//             const result = _.map(body.rows, 'doc');
-//             res.status(200).send({ result });
-//         } 
-//     });
-// });
+// -----------------------------------------------------------------
+// Our Hardware (Part1)
+// -----------------------------------------------------------------
+
+
+// POST - storeData
+router.post('/storeData', (req, res, next) => {
+    const { date, id_hardware, rotation } = req.body.input;
+    dataTable.insert({ date, rotation, id_hardware }, null, (err, body) => {
+        if (err) res.status(500).send({ err: 1, msg: err });
+        else {
+            res.status(200).send({ msg: 'Stored rotation' });
+        } 
+    });
+});
 
 // router.get('/shouldTurnOn', (req, res, next) => {
 //     nano.db.changes(DB_HARDWARE, { descending: true, limit: 1 }, (err, body) => {
@@ -99,18 +109,6 @@ router.post('/change', (req, res, next) => {
 //             });
 //         }
 //     })
-// });
-
-// router.post('/', multer.array(), (req, res, next) => {
-//     const { fecha, temperature } = req.body;
-//     hardwareTable.insert({ fecha, temperature }, null, (err, body) => {
-//         if (err) {
-//             console.log(err);
-//             res.status(500).send(err);
-//         } else {
-//             res.status(200).send({ msg: 'Stored temperature' });
-//         } 
-//     });
 // });
 
 module.exports = router;
