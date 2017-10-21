@@ -48,19 +48,22 @@ router.post('/search', (req, res, next) => {
         if (err) res.status(500).send({ err: 1, msg: err });
         else {
             const respValue = body.rows[0] || null;
-            const search = { id_hardware: respValue.key, type: respValue.value.type };
-            dataTable.view('search', 'search', { key: id_hardware }, (errData, bodyData) => {
-                if (errData) res.status(500).send({ err: 1, msg: errData });
-                else {
-                    const hardwareData = _.map(bodyData.rows, (data) => Object.assign({}, data.value));
-                    const timeFilter = _.filter(hardwareData, (data) => {
-                        const registeredTime = moment(_.keys(data)[0]);
-                        return registeredTime.isBetween(start_date, finish_date)
-                    });
-                    res.send(Object.assign(responseBase, { search }, { data: timeFilter }));
-                }
-            });
-            
+            if (respValue) {
+                const search = { id_hardware: respValue.key, type: respValue.value.type };
+                dataTable.view('search', 'search', { key: id_hardware }, (errData, bodyData) => {
+                    if (errData) res.status(500).send({ err: 1, msg: errData });
+                    else {
+                        const hardwareData = _.map(bodyData.rows, (data) => Object.assign({}, data.value));
+                        const timeFilter = _.filter(hardwareData, (data) => {
+                            const registeredTime = moment(_.keys(data)[0]);
+                            return registeredTime.isBetween(start_date, finish_date)
+                        });
+                        res.send(Object.assign(responseBase, { search }, { data: timeFilter }));
+                    }
+                });
+            } else {
+                res.send(Object.assign(responseBase));
+            }
         }
     });
 });
