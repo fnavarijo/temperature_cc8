@@ -68,6 +68,18 @@ router.post('/search', (req, res, next) => {
     });
 });
 
+// POST - change
+router.post('/change', (req, res, next) => {
+    const changeInfo = req.body.change;
+    const { date, rotation } = _.values(changeInfo)[0];
+    dataTable.insert({ date, rotation, id_hardware: _.keys(changeInfo)[0] }, null, (err, body) => {
+        if (err) res.status(500).send({ err: 1, msg: err });
+        else {
+            res.status(200).send(Object.assign(responseBase, { status: 'OK' }));
+        }
+    });
+});
+
 // router.get('/', (req, res, next) => {
 //     tempTable.list({include_docs: true}, (err, body) => {
 //         if (err) res.send('err');
