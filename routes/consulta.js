@@ -100,15 +100,18 @@ router.post('/storeData', (req, res, next) => {
     });
 });
 
-// router.get('/shouldTurnOn', (req, res, next) => {
-//     nano.db.changes(DB_HARDWARE, { descending: true, limit: 1 }, (err, body) => {
-//         const lastId = body.results.length > 0 ? body.results[0].id : null;
-//         if (!err) {
-//             hardwareTable.get(lastId, (errId, bodyDoc) => {
-//                 if (!errId) res.status(200).send({ result: bodyDoc });
-//             });
-//         }
-//     })
-// });
+// GET - shouldTurnOn
+router.get('/shouldTurnOn', (req, res, next) => {
+    nano.db.changes(DB_DATA, { descending: true, limit: 1 }, (err, body) => {
+        const lastId = body.results.length > 0 ? body.results[0].id : null;
+        if (!err) {
+            dataTable.get(lastId, (errId, bodyDoc) => {
+                const { rotation }  = bodyDoc;
+                const status = rotation >= 50;
+                if (!errId) res.status(200).send({ status });
+            });
+        }
+    })
+});
 
 module.exports = router;
