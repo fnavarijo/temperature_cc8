@@ -90,8 +90,9 @@ router.post('/change', (req, res, next) => {
 
 
 // POST - storeData
-router.post('/storeData', (req, res, next) => {
-    const { date, id_hardware, rotation } = req.body.input;
+router.post('/storeData', multer.array(), (req, res, next) => {
+    // console.log('params: ', req.body);
+    const { date, id_hardware, rotation } = req.body;
     dataTable.insert({ date, rotation, id_hardware }, null, (err, body) => {
         if (err) res.status(500).send({ err: 1, msg: err });
         else {
