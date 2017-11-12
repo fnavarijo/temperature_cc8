@@ -35,12 +35,11 @@ router.post('/info', (req, res, next) => {
     hardwareTable.view('info', 'info', (err, body) => {
         if (err) res.status(500).send({ err: 1, msg: err });
         else {
-            let result = _.map(body.rows, (doc) => {
-                const respValue = {};
-                respValue[doc.key] = doc.value;
-                return respValue;
+            const responseDataObject = {};
+            _.forEach(body.rows, (doc) => {
+                responseDataObject[doc.key] = doc.value;
             });
-            res.status(200).send(Object.assign({}, responseBase, { hardware: result }));
+            res.status(200).send(Object.assign({}, responseBase, { hardware: responseDataObject }));            
         }
     });
 });
@@ -57,12 +56,18 @@ router.post('/search', (req, res, next) => {
                 dataTable.view('search', 'search', { key: id_hardware }, (errData, bodyData) => {
                     if (errData) res.status(500).send({ err: 1, msg: errData });
                     else {
-                        const hardwareData = _.map(bodyData.rows, (data) => Object.assign({}, data.value));
+                        const hardwareData = _.map(bodyData.rows, (data) => data.value);
                         const timeFilter = _.filter(hardwareData, (data) => {
                             const registeredTime = moment(_.keys(data)[0]);
                             return registeredTime.isBetween(start_date, finish_date)
                         });
-                        res.send(Object.assign({}, responseBase, { search }, { data: timeFilter }));
+                        const responseObjectData = {};
+                        _.forEach(timeFilter, (data) => {
+                            const objectValue = _.values(data)[0];
+                            objectValue['status'] = objectValue.sensor >= 50;
+                            responseObjectData[_.keys(data)[0]] = objectValue;
+                        });
+                        res.send(Object.assign({}, responseBase, { search }, { data: responseObjectData }));
                     }
                 });
             } else {
@@ -75,8 +80,8 @@ router.post('/search', (req, res, next) => {
 // POST - change
 router.post('/change', (req, res, next) => {
     const changeInfo = req.body.change;
-    const { date, rotation } = _.values(changeInfo)[0];
-    dataTable.insert({ date, rotation, id_hardware: _.keys(changeInfo)[0] }, null, (err, body) => {
+    const { date, sensor } = _.values(changeInfo)[0];
+    dataTable.insert({ date, sensor, id_hardware: _.keys(changeInfo)[0] }, null, (err, body) => {
         if (err) res.status(500).send({ err: 1, msg: err });
         else {
             res.status(200).send(Object.assign({}, responseBase, { status: 'OK' }));
@@ -92,27 +97,112 @@ router.post('/change', (req, res, next) => {
 // POST - storeData
 router.post('/storeData', multer.array(), (req, res, next) => {
     // console.log('params: ', req.body);
-    const { date, id_hardware, rotation } = req.body;
-    dataTable.insert({ date, rotation, id_hardware }, null, (err, body) => {
-        if (err) res.status(500).send({ err: 1, msg: err });
-        else {
-            res.status(200).send({ msg: 'Stored rotation' });
-        } 
+    const { date, id_hardware, freq, sensor, tag } = req.body;
+    
+    if (!date || !id_hardware || !freq || !sensor ||! tag) return res.status(500).send({ err: 1, msg: 'Faltan parametros' });
+
+    hardwareTable.view('info', 'info', { key: id_hardware }, (err, body) => {
+        if (!err) {
+            const value = body.rows[0];
+            
+            if (value == undefined) {
+                hardwareTable.insert({ id_hardware, tag, type: 'input' }, null, (err, body) => {
+                    if (err) return res.status(500).send({ err: 1, msg: err });
+                    nano.db.changes(DB_DATA, { descending: true, limit: 1 }, (err, body) => {
+                        const lastId = body.results.length > 0 ? body.results[0].id : null;
+                        if (!err) {
+                            dataTable.get(lastId, (errId, bodyDoc) => {
+                                const lastSensor = bodyDoc.sensor;
+                                const lastFreq = bodyDoc.freq;
+                                if (!errId){
+                                    dataTable.insert({ date, sensor, freq, id_hardware }, null, (err, body) => {
+                                        if (err) res.status(500).send({ err: 1, msg: err });
+                                        else {
+                                            res.status(200).send({ msg: 'Stored rotation', sensor: lastSensor, freq: lastFreq });
+                                        } 
+                                    });
+                                } 
+                            });          
+                        }
+                    });
+                });
+            } else {       
+                nano.db.changes(DB_DATA, { descending: true, limit: 1 }, (err, body) => {
+                    const lastId = body.results.length > 0 ? body.results[0].id : null;
+                    if (!err) {
+                        dataTable.get(lastId, (errId, bodyDoc) => {
+                            const lastSensor = bodyDoc.sensor;
+                            const lastFreq = bodyDoc.freq;
+                            // const { sensor, freq } = bodyDoc;
+                            if (!errId){
+                                dataTable.insert({ date, sensor, freq, id_hardware }, null, (err, body) => {
+                                    if (err) res.status(500).send({ err: 1, msg: err });
+                                    else {
+                                        res.status(200).send({ msg: 'Stored rotation', sensor: lastSensor, freq: lastFreq });
+                                        // res.status(200).send({ status });
+                                    } 
+                                });
+                            } 
+                        });          
+                    }
+                });
+            }
+        }
     });
+    
+    
+
+
+
+
 });
 
 // GET - shouldTurnOn
-router.get('/shouldTurnOn', (req, res, next) => {
-    nano.db.changes(DB_DATA, { descending: true, limit: 1 }, (err, body) => {
-        const lastId = body.results.length > 0 ? body.results[0].id : null;
+router.get('/shouldTurnOn', multer.array(), (req, res, next) => {
+    const { id_output, tag } = req.query;
+    
+    if (!id_output || !tag) return res.status(500).send({ err: 1, msg: 'Faltan parametros' });
+
+    hardwareTable.view('info', 'info', { key: id_output }, (err, body) => {
         if (!err) {
-            dataTable.get(lastId, (errId, bodyDoc) => {
-                const { rotation }  = bodyDoc;
-                const status = rotation >= 50;
-                if (!errId) res.status(200).send({ status });
-            });
+            const value = body.rows[0];
+
+            if (value == undefined) {
+                hardwareTable.insert({ id_hardware: id_output, tag, type: 'output' }, null, (err, body) => {
+                    if (err) return res.status(500).send({ err: 1, msg: err });
+                    nano.db.changes(DB_DATA, { descending: true, limit: 1 }, (err, body) => {
+                        const lastId = body.results.length > 0 ? body.results[0].id : null;
+                        if (!err) {
+                            dataTable.get(lastId, (errId, bodyDoc) => {
+                                const { sensor, id_hardware }  = bodyDoc;
+                                const status = sensor >= 50;
+                                if (!errId){
+                                    res.header("Access-Control-Allow-Origin", "*");
+                                    res.status(200).send({ status, id_hardware });
+                                } 
+                            });
+                        }
+                    });
+                });
+            } else {          
+                nano.db.changes(DB_DATA, { descending: true, limit: 1 }, (err, body) => {
+                    const lastId = body.results.length > 0 ? body.results[0].id : null;
+                    if (!err) {
+                        dataTable.get(lastId, (errId, bodyDoc) => {
+                            const { sensor, id_hardware }  = bodyDoc;
+                            const status = sensor >= 50;
+                            if (!errId){
+                                res.header("Access-Control-Allow-Origin", "*");
+                                res.status(200).send({ status, id_hardware });
+                            } 
+                        });
+                    }
+                });
+            }
         }
     })
+
+
 });
 
 module.exports = router;

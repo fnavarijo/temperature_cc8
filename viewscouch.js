@@ -1,4 +1,4 @@
-// view 'info'
+// view 'info' in HARDWARE
 function (doc) {
   var values, data;
   data = {
@@ -8,12 +8,13 @@ function (doc) {
   emit(doc.id_hardware, data);
 }
 
-// view 'search'
+// view 'search' in DATA
 function (doc) {
-    var values;
-    var data = {};
-    data[doc.date] = {
-       rotation: doc.rotation
-     };
-    emit(doc.id_hardware, data);
-  }
+  var values;
+  var data = {};
+  data[doc.date] = {
+     sensor: doc.sensor,
+     freq: doc.freq
+   };
+  emit(doc.id_hardware, data);
+}
