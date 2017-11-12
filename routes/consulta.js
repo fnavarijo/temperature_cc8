@@ -80,8 +80,13 @@ router.post('/search', (req, res, next) => {
 // POST - change
 router.post('/change', (req, res, next) => {
     const changeInfo = req.body.change;
-    const { date, sensor } = _.values(changeInfo)[0];
-    dataTable.insert({ date, sensor, id_hardware: _.keys(changeInfo)[0] }, null, (err, body) => {
+    const { status, freq } = _.values(changeInfo)[0];
+
+    if (!freq) return res.status(500).send({ err: 1, msg: 'Faltan parametros' });
+
+    const date = moment().format('YYYY-MM-DDTHH:mm:ss');
+    const sensor = status ? 51 : 40;
+    dataTable.insert({ date, sensor, freq, id_hardware: _.keys(changeInfo)[0] }, null, (err, body) => {
         if (err) res.status(500).send({ err: 1, msg: err });
         else {
             res.status(200).send(Object.assign({}, responseBase, { status: 'OK' }));
