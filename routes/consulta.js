@@ -7,13 +7,17 @@ const moment = require('moment');
 
 const DB_HARDWARE = 'hardware';
 const DB_DATA = 'data';
+const DB_EVENTO = 'evento';
 const ID_PLATFORM = 'PT_CC8Project001';
+const SERVERIP = '192.168.0.14';
 
 const nano = require('nano')('http://docker_couch_1:5984');
 nano.db.create(DB_HARDWARE);
 nano.db.create(DB_DATA);
+// nano.db.create(DB_EVENTO);
 const hardwareTable = nano.db.use(DB_HARDWARE);
 const dataTable = nano.db.use(DB_DATA);
+// const eventoTable = nano.db.use(DB_EVENTO);
 
 express().use(bodyParser.json());
 express().use(bodyParser.urlencoded({ extended: true }));
@@ -208,6 +212,48 @@ router.get('/shouldTurnOn', multer.array(), (req, res, next) => {
     })
 
 
+});
+
+const axiosChangeMethod = (changeInfo) => {
+    const ipCall = changeInfo.url === SERVERIP ? '' : `http://${SERVERIP}`;
+    const { sensor, status, freq, text } = changeInfo;
+    return axios.post(`${ipCall}/change`, { sensor, status, freq, text });
+};
+
+// const return
+
+router.post('/create', multer.array(), (req, res, next) => {
+    const { create } = req.body;
+    const ifStatement = create.if;
+    const thenStatement = create.then;
+    const elseStatement = create.else;
+    console.log('CREATE: ', ifStatement, thenStatement, elseStatement);
+
+    // IF
+    // Hacer un search a un server para obtener su ultimo estado
+    const conditionUrl = ifStatement.left.url === SERVERIP ? '' : `http://${SERVERIP}`;
+    const conditionHardware = ifStatement.left.id;
+    const start_date = moment();
+    const finish_date = moment();
+    const conditionSign = ifStatement.condition;
+    axios.post(`${conditionUrl}/search`, { id_hardware: conditionHardware, start_date, finish_date })
+        .then((response) => {
+            // condicion
+            const serverCallChange = true ? axiosChangeMethod(thenStatement) : axiosChangeMethod(elseStatement);
+            serverCallChange.then((result) => {
+                console.log('HARDWARE CHANGED');
+                // res.send({ msg: 'ok' });
+            });
+        });
+
+    // El objeto create que envian como parametro es el asignado a la variable create
+
+    // AXIOS
+    // Para hacer llamadas a otros servers por medio de webserver
+    
+    
+
+    res.send({ msg: 'ok' });
 });
 
 module.exports = router;
